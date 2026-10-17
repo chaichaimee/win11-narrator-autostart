@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  autounattend.xml for Windows 11 25H2 and 26H2 (build 26200 / 26300), x64.
+  Goal: Narrator starts by itself in Windows Setup, and Setup stays fully
+  interactive so it can be driven with Narrator.
+
+  Fixes compared with the older file:
+  1. The wcm namespace prefix is now declared. Without it the attribute
+     wcm:action is not well-formed XML and Setup can reject the whole file.
+  2. The specialize-pass Narrator launch is removed. That pass runs in a
+     non-interactive session, so Narrator could not be used there anyway.
+  3. Narrator is started through X:\Windows\System32\start_narrator.cmd,
+     which boot_narrator.bat puts inside boot.wim. A flag file makes sure
+     Narrator is started only once, because starting it twice can toggle it off.
+     If the helper is missing, the file falls back to a direct launch.
+  4. Nothing here hides Setup pages, so nothing hides Narrator output.
+-->
+<unattend xmlns="urn:schemas-microsoft-com:unattend"
+          xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <settings pass="windowsPE">
+        <component name="Microsoft-Windows-Setup" processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+            <RunSynchronous>
+                <RunSynchronousCommand wcm:action="add">
+                    <Order>1</Order>
+                    <!-- cmd /c start returns at once, so Setup is not blocked. -->
+                    <Path>cmd.exe /c echo autounattend windowsPE command ran &gt;&gt; X:\narrator_log.txt &amp; if exist X:\Windows\System32\start_narrator.cmd (call X:\Windows\System32\start_narrator.cmd) else (start "" X:\Windows\System32\Narrator.exe)</Path>
+                    <Description>Start Narrator in Windows Setup (once, non-blocking)</Description>
+                </RunSynchronousCommand>
+            </RunSynchronous>
+        </component>
+    </settings>
+
+    <settings pass="oobeSystem">
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+            <FirstLogonCommands>
+                <SynchronousCommand wcm:action="add">
+                    <Order>1</Order>
+                    <CommandLine>cmd.exe /c start "" "C:\Windows\System32\Narrator.exe"</CommandLine>
+                    <Description>Start Narrator at first logon (non-blocking)</Description>
+                </SynchronousCommand>
+            </FirstLogonCommands>
+        </component>
+    </settings>
+</unattend>
