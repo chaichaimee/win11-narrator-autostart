@@ -56,7 +56,12 @@ echo OK: index 2 mounted.
 
 set "step=6"
 echo [Step 6 of 9] Patching the Setup image.
+if exist "%here%debloat_config.txt" goto :s6_cfg
 powershell -NoProfile -ExecutionPolicy Bypass -File "%here%patch_setup_image.ps1" -Mount "%mount%"
+goto :s6_done
+:s6_cfg
+powershell -NoProfile -ExecutionPolicy Bypass -File "%here%patch_setup_image.ps1" -Mount "%mount%" -Config "%here%debloat_config.txt"
+:s6_done
 if not "%errorlevel%"=="0" goto :e_patch
 echo OK: patch applied.
 
@@ -82,6 +87,7 @@ if not "%errorlevel%"=="0" goto :e_verify
 if not exist "%mount%\Windows\System32\start_narrator.cmd" goto :e_verify2
 echo OK: start_narrator.cmd is inside boot.wim index 2.
 if exist "%mount%\Windows\System32\winpeshl.ini" (echo Info: winpeshl.ini is present in the image.) else (echo Info: no winpeshl.ini in the image.)
+if exist "%mount%\Windows\System32\setup_hook.cmd" (echo Info: setup_hook.cmd is present, so the Setup CmdLine hook is in place.) else (echo Info: no setup_hook.cmd, so the Setup CmdLine hook is not in place.)
 dism /Unmount-Image /MountDir:"%mount%" /Discard >nul 2>&1
 dism /Cleanup-Wim >nul 2>&1
 if exist "%mount%" rmdir /s /q "%mount%" >nul 2>&1
@@ -101,9 +107,9 @@ echo SKIPPED: no autounattend.xml found at %unattend%
 echo.
 echo ===== SUCCESS. All 9 steps finished. =====
 echo Diagnostic details were saved to C:\boot_diag.txt
+echo At boot you should hear a beep when the Narrator helper starts, and two beeps when Narrator is running. If Narrator is silent, read narrator_log.txt in the USB drive root.
 echo This script only patches boot.wim. It does NOT make the media smaller.
-echo Next step: run make_small_iso.bat to keep one edition, compress it, and build the ISO.
-echo Then test the ISO in a virtual machine.
+echo Next step for old PCs: run debloat_install_image.bat. Otherwise put the media folder on a bootable USB drive and test it.
 echo Press any key to close this window.
 pause >nul
 exit /b 0
